@@ -125,6 +125,26 @@ new_dio_interval(void)
   ticks = (time * CLOCK_SECOND) / 1000;
   curr_instance.dag.dio_next_delay = ticks;
 
+  /// NADSA
+ uip_ds6_addr_t *addr1;
+ addr1 = uip_ds6_get_link_local(ADDR_PREFERRED);
+//  addr1 = uip_ds6_get_global(ADDR_PREFERRED);
+//  LOG_INFO("Hiiiiiii ");
+//  printf("local  ");
+//  LOG_INFO_6ADDR(&addr1->ipaddr);
+//  LOG_INFO_("\n");
+//  LOG_INFO_("  %d",addr1->ipaddr.u8[15]);
+//  LOG_INFO_("\n");
+  int mote_id = addr1->ipaddr.u8[15];
+  curr_instance.dag.dio_next_delay = ticks;
+  LOG_INFO("Timer val = %u mote_id %d \n",(unsigned)ticks,mote_id);
+  if(mote_id==11){//prop:11,attack:15
+	ticks = (unsigned)524;
+	curr_instance.dag.dio_next_delay = ticks;
+	LOG_INFO("Timer8 val = %u \n",(unsigned)ticks);
+  }
+  ///
+
   /* random number between I/2 and I */
   ticks = ticks / 2 + (ticks / 2 * (uint32_t)random_rand()) / RANDOM_RAND_MAX;
 
@@ -133,6 +153,10 @@ new_dio_interval(void)
    * operate efficiently. Therefore we need to calculate the delay between
    * the randomized time and the start time of the next interval.
    */
+  /// NADSA
+//  if(mote_id==11)
+//	ticks = 132;
+  ///
   curr_instance.dag.dio_next_delay -= ticks;
   curr_instance.dag.dio_send = 1;
   /* reset the redundancy counter */
