@@ -110,12 +110,6 @@ reset(void)
   LOG_INFO("reset MRHOF\n");
 }
 /*---------------------------------------------------------------------------*/
-/*static uint16_t
-nbr_link_metric(rpl_nbr_t *nbr)
-{
-  const struct link_stats *stats = rpl_neighbor_get_link_stats(nbr);
-  return stats != NULL ? stats->etx : 0xffff;
-}*/
 static uint16_t
 nbr_link_metric(rpl_nbr_t *nbr)
 {
@@ -140,9 +134,12 @@ static uint16_t
 link_metric_to_rank(uint16_t etx)
 {
 #if RPL_MRHOF_SQUARED_ETX
-  uint32_t squared_etx = ((uint32_t)etx * etx) / LINK_STATS_ETX_DIVISOR;
+  uint32_t squared_etx = ((uint32_t)etx * etx) / LINK_STATS_ETX_DIVISOR;   
   return (uint16_t)MIN(squared_etx, 0xffff);
 #else /* RPL_MRHOF_SQUARED_ETX */
+  /// NADSA
+//  printf("EEEEEEEETXXXXXXXX is %d \n", etx/LINK_STATS_ETX_DIVISOR);
+  /// 
   return etx;
 #endif /* RPL_MRHOF_SQUARED_ETX */
 }
