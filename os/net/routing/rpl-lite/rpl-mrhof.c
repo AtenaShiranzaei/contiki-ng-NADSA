@@ -110,11 +110,30 @@ reset(void)
   LOG_INFO("reset MRHOF\n");
 }
 /*---------------------------------------------------------------------------*/
-static uint16_t
+/*static uint16_t
 nbr_link_metric(rpl_nbr_t *nbr)
 {
   const struct link_stats *stats = rpl_neighbor_get_link_stats(nbr);
   return stats != NULL ? stats->etx : 0xffff;
+}*/
+static uint16_t
+nbr_link_metric(rpl_nbr_t *nbr)
+{
+  const struct link_stats *stats = rpl_neighbor_get_link_stats(nbr);
+  /// NADSA
+//  printf("EEEEEEEETXXXXXXXX is %d \n",stats->etx);
+  ///
+  return stats != NULL ? stats->etx : 0xffff;
+}
+/////// NADSA
+int16_t
+nbr_link_rssi(rpl_nbr_t *nbr)
+{
+  const struct link_stats *stats = rpl_neighbor_get_link_stats(nbr);
+  /// NADSA
+//  printf("EEEEEEEETXXXXXXXX is %d \n",stats->etx);
+  ///
+  return stats != NULL ? stats->rssi : 0xffff;
 }
 /*---------------------------------------------------------------------------*/
 static uint16_t
