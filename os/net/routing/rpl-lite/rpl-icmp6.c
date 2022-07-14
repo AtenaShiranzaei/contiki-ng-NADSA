@@ -50,6 +50,12 @@
 #include "lib/random.h"
 
 #include <limits.h>
+///  emadaliazde
+#include <math.h>
+//#include "math.h"
+#include "rpl-neighbor.h"
+
+///
 
 /* Log configuration */
 #include "sys/log.h"
@@ -168,6 +174,38 @@ rpl_icmp6_dis_output(uip_ipaddr_t *addr)
   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIS, 2);
 }
 /*---------------------------------------------------------------------------*/
+
+
+   //NADSA----calculate the destination of a node to root
+
+
+double calculate_dist(int mote_id)
+{
+  uint8_t root_x=24,root_y=24;
+  uint8_t node_x=24,node_y=24;
+  switch(mote_id)
+	{
+		case 2: node_x=17;node_y=10; break;
+		case 3: node_x=73;node_y=93; break;
+		case 4: node_x=31;node_y=50; break;
+		case 5: node_x=7;node_y=14; break;
+		case 6: node_x=6;node_y=7;  break;
+		case 7: node_x=87;node_y=73; break;
+		case 8: node_x=51;node_y=56;  break;
+		case 9: node_x=43;node_y=39; break;
+		case 10: node_x=63;node_y=93; break;
+	}
+
+  double dist=sqrt((pow((node_x-root_x),2))+(pow((node_y-root_y),2))); 
+  LOG_INFO(" mote_id=%d node_x=%d, node_y=%d dist =%f \n",mote_id, node_x, node_y,dist);
+  return dist;
+
+}
+
+
+ /// NADSA
+static uint8_t my_dio_count_1[12]={0,0,0,0,0,0,0,0,0,0,0,0};
+///
 static void
 dio_input(void)
 {
@@ -178,6 +216,137 @@ dio_input(void)
   int i;
   int len;
   uip_ipaddr_t from;
+
+  //// NADSA
+  uip_ds6_addr_t *addr1;
+//  addr1 = uip_ds6_get_global(ADDR_PREFERRED);
+  addr1 = uip_ds6_get_link_local(ADDR_PREFERRED);
+//  LOG_INFO("Hiiiiiii ");
+//  printf("local  ");
+//  LOG_INFO_6ADDR(&addr1->ipaddr);
+//  LOG_INFO_("\n");
+//  LOG_INFO_("  %d",addr1->ipaddr.u8[15]);
+//  LOG_INFO_("\n");
+  int mote_id = addr1->ipaddr.u8[15];
+  LOG_INFO("node_x mote_id=%d \n",mote_id);
+  double dist;
+  dist = calculate_dist(mote_id);
+  uint8_t min_hop;
+  min_hop = ceil(dist / 50); // 
+//  LOG_INFO("min hop is %d mote id is %d \n ",min_hop,mote_id);
+  static uint8_t num_dio[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+  uint8_t src_id = UIP_IP_BUF->srcipaddr.u8[15];
+  num_dio[src_id]++;
+//  LOG_INFO("num_dio is %d src_id is %d my %d\n ",num_dio[src_id],src_id,my_dio_count_1[mote_id]);
+//  LOG_INFO("Hiiiii is %d \n",src_id);
+//  LOG_INFO_("Hi1 node %d count %d \n",mote_id,my_dio_count_1[mote_id]);
+  if(my_dio_count_1[mote_id]==0){
+	 int ii;
+	 for(ii=0;ii<12;ii++){
+		 num_dio[ii] =0;
+	 }
+  }
+  rpl_nbr_t * nbr1 = rpl_neighbor_get_from_ipaddr(&UIP_IP_BUF->srcipaddr);
+//  const struct link_stats *stats1 = rpl_neighbor_get_link_stats(nbr1);
+  int16_t rssi = nbr_link_rssi(nbr1); //rpl_neighbor_get_link_metric(nbr1);
+  uint16_t etx = rpl_neighbor_get_link_metric(nbr1)/128;
+  
+  buffer = UIP_ICMP_PAYLOAD;
+  
+  uint16_t hc  = get16(buffer, 2)/128;
+  
+//  LOG_INFO("Hiiiii1 min_hop is %d HC is %d etx is %d\n",min_hop,hc,etx);
+//  int16_t tmp = stats1->rssi;
+  
+  uint8_t rssi_fuzzy;
+  uint8_t etx_fuzzy;
+  uint8_t diff_dio_fuzzy;
+  
+  int8_t diff_dio;
+  diff_dio = my_dio_count_1[mote_id]-num_dio[src_id];  
+  bool is_attack = false;
+  LOG_INFO("diff_dio is %d etx %d rssi %d src_id is %d \n",diff_dio,etx,rssi,src_id);
+  
+  
+  /// FUZZY
+  
+  if(diff_dio==0){
+	  diff_dio_fuzzy = 0; // Low
+  }else if(diff_dio<3){
+	  diff_dio_fuzzy = 1; /// Medium
+  }else{
+	  diff_dio_fuzzy = 2; ///  High
+  }
+  
+  
+  if(rssi<-80){
+	  rssi_fuzzy = 0; // Low
+  }else if(rssi<-60){
+	  rssi_fuzzy = 1; // Medium
+  }else{
+	  rssi_fuzzy = 2; /// High
+  }
+  
+  if(etx<2){
+	  etx_fuzzy = 0; // Low
+  }else if(etx<3){
+	  etx_fuzzy = 1; // Medium
+  }else{
+	  etx_fuzzy = 2; /// High
+  }  
+
+ // decision rule
+
+ if(diff_dio_fuzzy==0 && etx_fuzzy ==2 && rssi_fuzzy == 0){
+	 is_attack = true;
+ }else if(diff_dio_fuzzy==0 && etx_fuzzy ==1){
+	 is_attack = true;	 
+ }else if(etx_fuzzy ==0){
+	 is_attack = false;	 
+ }else if(diff_dio_fuzzy==0 && etx_fuzzy ==0 && rssi_fuzzy == 1){
+	 is_attack = true;	 
+ }else if(diff_dio_fuzzy==0 && etx_fuzzy ==0 && rssi_fuzzy == 0){
+	 is_attack = true;	 
+ }else if(diff_dio_fuzzy==1 && etx_fuzzy ==0 && rssi_fuzzy == 0){
+	 is_attack = true;	 
+ }else if(diff_dio_fuzzy==1 && etx_fuzzy ==0 && rssi_fuzzy == 1){
+	 is_attack = true;	 
+ }else if(diff_dio_fuzzy==2){
+	 is_attack = false;	 
+ }else{
+	 is_attack = false;	 
+ }
+
+  /// ALGORITHM
+  if(min_hop>hc && hc!=0x1ff){
+	  is_attack = true;
+	  LOG_INFO("Rank Attack HC =%d min hop =%d src_id =%d rank %d\n",hc,min_hop,src_id,get16(buffer, 2));
+//	  goto discard;
+  }
+  if(diff_dio<0){
+	  is_attack = true;
+	  LOG_INFO("Attack DIO my %d src id %d num %d\n",my_dio_count_1[mote_id],src_id,num_dio[src_id]);
+//	  goto discard;	  
+  }
+  ///
+ if(hc==0x1ff || rssi == -1){
+  is_attack = false;
+ }
+ if(is_attack == true || src_id==11){
+	LOG_INFO("It is Attack %d attacker %d\n",is_attack,src_id);
+ }
+ 
+ LOG_INFO("Attack state %d attacker %d\n",is_attack,src_id);
+ if(0/*Preventation*/){//prop:1 attack,rpl:0
+	 if(is_attack == true){ /// Preventation (discard packet)
+		 goto discard;
+	 }
+ }
+
+ 
+  ///
+///  
+  //
 
   memset(&dio, 0, sizeof(dio));
 
@@ -197,12 +366,16 @@ dio_input(void)
 
   /* Process the DIO base option. */
   i = 0;
-  buffer = UIP_ICMP_PAYLOAD;
+  //NADSA
+//  buffer = UIP_ICMP_PAYLOAD;
 
   dio.instance_id = buffer[i++];
   dio.version = buffer[i++];
   dio.rank = get16(buffer, i);
   i += 2;
+/// NADSA
+  LOG_INFO("Hiiiii version is %d rank is %d from %d\n",dio.version,dio.rank,src_id);
+///
 
   dio.grounded = buffer[i] & RPL_DIO_GROUNDED;
   dio.mop = (buffer[i]& RPL_DIO_MOP_MASK) >> RPL_DIO_MOP_SHIFT;
@@ -334,6 +507,22 @@ rpl_icmp6_dio_output(uip_ipaddr_t *uc_addr)
   unsigned char *buffer;
   int pos;
   uip_ipaddr_t *addr = uc_addr;
+
+  uip_ds6_addr_t *addr1;
+//  addr1 = uip_ds6_get_global(/*ADDR_PREFERRED*/-1);
+  addr1 = uip_ds6_get_link_local(ADDR_PREFERRED);
+//  LOG_INFO("Hiiiiiii ");
+  LOG_INFO_6ADDR(&addr1->ipaddr);
+  int mote_id = addr1->ipaddr.u8[15];
+  if(mote_id<12){
+	  my_dio_count_1[mote_id]++;
+	  if(my_dio_count_1[mote_id]>20){
+		 my_dio_count_1[mote_id]=0;
+	  }
+	  LOG_INFO_("Hi11 node %d count %d",mote_id,my_dio_count_1[mote_id]);
+	  LOG_INFO_("\n");
+  }
+  ///
 
   /* Make sure we're up-to-date before sending data out */
   rpl_dag_update_state();
