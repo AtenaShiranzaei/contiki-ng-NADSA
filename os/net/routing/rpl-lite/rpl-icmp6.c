@@ -50,12 +50,8 @@
 #include "lib/random.h"
 
 #include <limits.h>
-///  emadaliazde
 #include <math.h>
-//#include "math.h"
 #include "rpl-neighbor.h"
-
-///
 
 /* Log configuration */
 #include "sys/log.h"
@@ -175,10 +171,6 @@ rpl_icmp6_dis_output(uip_ipaddr_t *addr)
 }
 /*---------------------------------------------------------------------------*/
 
-
-   //NADSA----calculate the destination of a node to root
-
-
 double calculate_dist(int mote_id)
 {
   uint8_t root_x=24,root_y=24;
@@ -205,7 +197,6 @@ double calculate_dist(int mote_id)
 
  /// NADSA
 static uint8_t my_dio_count_1[12]={0,0,0,0,0,0,0,0,0,0,0,0};
-///
 static void
 dio_input(void)
 {
@@ -219,27 +210,16 @@ dio_input(void)
 
   //// NADSA
   uip_ds6_addr_t *addr1;
-//  addr1 = uip_ds6_get_global(ADDR_PREFERRED);
   addr1 = uip_ds6_get_link_local(ADDR_PREFERRED);
-//  LOG_INFO("Hiiiiiii ");
-//  printf("local  ");
-//  LOG_INFO_6ADDR(&addr1->ipaddr);
-//  LOG_INFO_("\n");
-//  LOG_INFO_("  %d",addr1->ipaddr.u8[15]);
-//  LOG_INFO_("\n");
   int mote_id = addr1->ipaddr.u8[15];
   LOG_INFO("node_x mote_id=%d \n",mote_id);
   double dist;
   dist = calculate_dist(mote_id);
   uint8_t min_hop;
   min_hop = ceil(dist / 50); // 
-//  LOG_INFO("min hop is %d mote id is %d \n ",min_hop,mote_id);
   static uint8_t num_dio[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   uint8_t src_id = UIP_IP_BUF->srcipaddr.u8[15];
   num_dio[src_id]++;
-//  LOG_INFO("num_dio is %d src_id is %d my %d\n ",num_dio[src_id],src_id,my_dio_count_1[mote_id]);
-//  LOG_INFO("Hiiiii is %d \n",src_id);
-//  LOG_INFO_("Hi1 node %d count %d \n",mote_id,my_dio_count_1[mote_id]);
   if(my_dio_count_1[mote_id]==0){
 	 int ii;
 	 for(ii=0;ii<12;ii++){
@@ -247,17 +227,12 @@ dio_input(void)
 	 }
   }
   rpl_nbr_t * nbr1 = rpl_neighbor_get_from_ipaddr(&UIP_IP_BUF->srcipaddr);
-//  const struct link_stats *stats1 = rpl_neighbor_get_link_stats(nbr1);
   int16_t rssi = nbr_link_rssi(nbr1); //rpl_neighbor_get_link_metric(nbr1);
   uint16_t etx = rpl_neighbor_get_link_metric(nbr1)/128;
   
   buffer = UIP_ICMP_PAYLOAD;
   
   uint16_t hc  = get16(buffer, 2)/128;
-  
-//  LOG_INFO("Hiiiii1 min_hop is %d HC is %d etx is %d\n",min_hop,hc,etx);
-//  int16_t tmp = stats1->rssi;
-  
   uint8_t rssi_fuzzy;
   uint8_t etx_fuzzy;
   uint8_t diff_dio_fuzzy;
@@ -343,10 +318,7 @@ dio_input(void)
 	 }
  }
 
- 
-  ///
-///  
-  //
+
 
   memset(&dio, 0, sizeof(dio));
 
@@ -367,15 +339,13 @@ dio_input(void)
   /* Process the DIO base option. */
   i = 0;
   //NADSA
-//  buffer = UIP_ICMP_PAYLOAD;
-
   dio.instance_id = buffer[i++];
   dio.version = buffer[i++];
   dio.rank = get16(buffer, i);
   i += 2;
-/// NADSA
+  // NADSA
   LOG_INFO("Hiiiii version is %d rank is %d from %d\n",dio.version,dio.rank,src_id);
-///
+
 
   dio.grounded = buffer[i] & RPL_DIO_GROUNDED;
   dio.mop = (buffer[i]& RPL_DIO_MOP_MASK) >> RPL_DIO_MOP_SHIFT;
@@ -509,9 +479,7 @@ rpl_icmp6_dio_output(uip_ipaddr_t *uc_addr)
   uip_ipaddr_t *addr = uc_addr;
 
   uip_ds6_addr_t *addr1;
-//  addr1 = uip_ds6_get_global(/*ADDR_PREFERRED*/-1);
   addr1 = uip_ds6_get_link_local(ADDR_PREFERRED);
-//  LOG_INFO("Hiiiiiii ");
   LOG_INFO_6ADDR(&addr1->ipaddr);
   int mote_id = addr1->ipaddr.u8[15];
   if(mote_id<12){
