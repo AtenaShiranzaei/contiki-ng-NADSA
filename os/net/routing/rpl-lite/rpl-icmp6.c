@@ -287,7 +287,7 @@ dio_input(void)
  }else if(diff_dio_fuzzy==1 && etx_fuzzy ==0 && rssi_fuzzy == 1){
 	 is_attack = true;	 
  }else if(diff_dio_fuzzy==2){
-	 is_attack = false;	 
+	 is_attack = true;	 
  }else{
 	 is_attack = false;	 
  }
